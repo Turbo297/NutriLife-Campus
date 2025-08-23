@@ -1,23 +1,50 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import BaseLayout from './layouts/BaseLayout.vue';
+import Homepage from '@/assets/Homepage.jpg'
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+  <BaseLayout>
+    <!-- 这里先写静态内容，后续会换成 <router-view /> -->
+    <div class="row align-items-center">
+      <div class="image-container">
+        <img src="@/assets/Homepage.jpg" alt="Homepage" class="img-fluid rounded shadow-sm" />
+        <div class="text-overlay">Culturally friendly, budget‑smart meals for international students.</div>
+      </div>
+      <div class="col-lg-7">
+        <h1 class="display-5 fw-bold mb-3">Eat well on $10/day</h1>
+        <div class="d-flex gap-2">
+          <a class="btn btn-primary btn-lg" href="#">Explore Recipes</a>
+          <a class="btn btn-outline-secondary btn-lg" href="#">Start Meal Planner</a>
+        </div>
+      </div>
     </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+  </BaseLayout>
 </template>
 
+
 <style scoped>
+.image-container {
+  position: relative;
+  display: inline-block;
+}
+
+.image-container img {
+  width: 100%;
+  display: block;
+}
+
+.text-overlay {
+  position: absolute;
+  bottom: 35px;
+  left: 20px;
+  color: white;
+  font-size: 36px;
+  font-weight: bold;
+  border-radius: 5px;
+  max-width: 40%;
+}
+
 header {
   line-height: 1.5;
 }
