@@ -60,7 +60,6 @@
 </template>
 
 <script setup>
-// 无逻辑时可留空
 </script>
 
 <style scoped>

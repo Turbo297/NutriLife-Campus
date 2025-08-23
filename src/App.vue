@@ -5,7 +5,6 @@ import Homepage from '@/assets/Homepage.jpg'
 
 <template>
   <BaseLayout>
-    <!-- 这里先写静态内容，后续会换成 <router-view /> -->
     <div class="row align-items-center">
       <div class="image-container">
         <img src="@/assets/Homepage.jpg" alt="Homepage" class="img-fluid rounded shadow-sm" />
