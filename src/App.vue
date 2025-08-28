@@ -1,6 +1,7 @@
 <script setup>
 import BaseLayout from './layouts/BaseLayout.vue';
 import Homepage from '@/assets/Homepage.jpg'
+import Home from '@/pages/Home.vue'
 </script>
 
 <template>

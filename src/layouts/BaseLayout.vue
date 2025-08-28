@@ -3,40 +3,32 @@
     <!-- top -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
       <div class="container">
-        <a class="navbar-brand fw-semibold" href="#">
-            NutriLife Campus
-        </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#mainNavbar"
-          aria-controls="mainNavbar"
-          aria-expanded="false"
-          aria-label="Toggle navigation">
+        <RouterLink class="navbar-brand fw-semibold" to="/">NutriLife Campus</RouterLink>
+
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+                aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="mainNavbar">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">Home</a>
+              <router-link to="/" class="nav-link" exact-active-class="active">Home</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Learn</a>
+              <router-link to="/learn" class="nav-link" exact-active-class="active">Learn</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Plan</a>
+              <router-link to="/plan" class="nav-link" exact-active-class="active">Plan</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Map</a>
+              <router-link to="/map" class="nav-link" exact-active-class="active">Map</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Events</a>
+              <router-link to="/events" class="nav-link" exact-active-class="active">Events</router-link>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Accounts</a>
-            </li>
+            <AccountMenu />
           </ul>
         </div>
       </div>
@@ -45,7 +37,7 @@
     <!-- main -->
     <main class="flex-grow-1">
       <div class="container py-4">
-        <slot />
+        <router-view></router-view>
       </div>
     </main>
 
@@ -60,8 +52,5 @@
 </template>
 
 <script setup>
+import AccountMenu from '@/components/AccountMenu.vue';
 </script>
-
-<style scoped>
-</style>
-
