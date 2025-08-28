@@ -6,8 +6,8 @@ export function useAuth() {
   const user = userRef
   const isLoggedIn = computed(() => !!user.value)
 
-  function login({ email, name }) {
-    user.value = { email, name }
+  function login({ email, password},) {
+    user.value = { email, password}
   }
 
   function logout() {

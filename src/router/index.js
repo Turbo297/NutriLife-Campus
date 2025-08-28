@@ -4,6 +4,7 @@ import Recipes from '../pages/Recipes.vue'
 import Planner from '../pages/Planner.vue'
 import Learn from '../pages/Learn.vue'
 import Login from '../pages/Login.vue'
+import Register from '@/pages/Register.vue'
 const routes = [
   {
     path: '/',
@@ -29,6 +30,11 @@ const routes = [
     path: '/login',
     name: 'login',    
     component: Login
+  },
+  {
+    path: '/register',
+    name: 'register',  
+    component: Register
   }
 ]
 
