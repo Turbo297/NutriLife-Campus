@@ -42,7 +42,6 @@ import Homepage from '@/assets/Homepage.jpg'
   border-radius: 5px;
   max-width: 45%;
   word-wrap: break-word;
-
   font-size: clamp(16px, 4vw, 36px);
   line-height: 1.2;
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell d-flex flex-column min-vh-100">
+  <div class="d-flex flex-column min-vh-100">
     <!-- top -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
       <div class="container-lg">
