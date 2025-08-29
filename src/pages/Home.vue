@@ -38,11 +38,15 @@ import Homepage from '@/assets/Homepage.jpg'
   bottom: 35px;
   left: 20px;
   color: white;
-  font-size: 36px;
   font-weight: bold;
   border-radius: 5px;
-  max-width: 40%;
+  max-width: 45%;
+  word-wrap: break-word;
+
+  font-size: clamp(16px, 4vw, 36px);
+  line-height: 1.2;
 }
+
 
 header {
   line-height: 1.5;
