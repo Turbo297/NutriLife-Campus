@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "Tofu Stir-fry", "protein": 22, "tags": ["vegetarian","high-protein"] },
+  { "id": 2, "name": "Chicken Rice Bowl", "protein": 28, "tags": ["budget"] },
+  { "id": 3, "name": "Lentil Soup", "protein": 18, "tags": ["vegetarian","budget"] }
+]

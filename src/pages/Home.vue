@@ -11,8 +11,12 @@ import Homepage from '@/assets/Homepage.jpg'
       <div class="col-lg-7">
         <h1 class="display-5 fw-bold mb-3">Eat well on $10/day</h1>
         <div class="d-flex gap-2">
-          <a class="btn btn-primary btn-lg" href="#">Explore Recipes</a>
-          <a class="btn btn-outline-secondary btn-lg" href="#">Start Meal Planner</a>
+          <router-link to="/recipes" class="btn btn-primary btn-lg px-4 shadow">
+            Explore Recipes
+          </router-link>
+          <a class="btn btn-outline-secondary btn-lg px-4" href="#">
+            Start Meal Planner
+          </a>
         </div>
       </div>
     </div>
