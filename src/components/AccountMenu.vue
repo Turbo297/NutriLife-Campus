@@ -1,29 +1,52 @@
 <script setup>
-import { computed } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth'
 
 const router = useRouter()
-const { user, isLoggedIn, logout } = useAuth()
+const auth = getAuth()
+const currentUser = ref(null)
+const isLoggedIn = computed(() => !!currentUser.value)
 
 const initials = computed(() => {
-  if (!user.value?.name) return 'U'
-  return user.value.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase()
+  if (!currentUser.value?.email) return 'A'
+  return currentUser.value.email[0].toUpperCase()
+})
+
+const displayName = computed(() => {
+  return currentUser.value?.displayName || 
+         currentUser.value?.email?.split('@')[0] || 
+         'User'
+})
+
+// Listen for auth state changes
+onMounted(() => {
+  onAuthStateChanged(auth, (user) => {
+    currentUser.value = user
+    console.log('Auth state changed:', user?.email)
+  })
 })
 
 function goLogin() {
   router.push({ name: 'login' })
 }
+
 function goRegister() {
   router.push({ name: 'register' })
 }
+
 function goProfile() {
   router.push({ name: 'profile' })
 }
-function doLogout() {
-  logout()
-  // redirect to home page
-  router.push({ name: 'home' })
+
+async function doLogout() {
+  try {
+    await signOut(auth)
+    console.log('Logged out successfully')
+    router.push({ name: 'home' })
+  } catch (error) {
+    console.error('Logout error:', error)
+  }
 }
 </script>
 
@@ -39,11 +62,11 @@ function doLogout() {
             style="width:28px;height:28px;font-size:12px;">
         {{ isLoggedIn ? initials : 'A' }}
       </span>
-      <span>Account</span>
+      <span>{{ isLoggedIn ? displayName : 'Account' }}</span>
     </a>
 
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown" style="min-width: 240px;">
-      <!-- not logged in: show registeration -->
+      <!-- not logged in: show registration -->
       <template v-if="!isLoggedIn">
         <li class="px-3 py-2 text-muted small">You are not signed in</li>
         <li><hr class="dropdown-divider"></li>
@@ -51,11 +74,11 @@ function doLogout() {
         <li><button class="dropdown-item" @click="goRegister">Register</button></li>
       </template>
 
-        <!-- logged in: show account message and log-out --> 
+      <!-- logged in: show account info and logout -->
       <template v-else>
         <li class="px-3 py-2">
-          <div class="fw-semibold">{{ user.name }}</div>
-          <div class="text-muted small">{{ user.email }}</div>
+          <div class="fw-semibold">{{ displayName }}</div>
+          <div class="text-muted small">{{ currentUser?.email }}</div>
         </li>
         <li><hr class="dropdown-divider"></li>
         <li><button class="dropdown-item" @click="goProfile">My profile</button></li>
