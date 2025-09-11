@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
+import RecipeRatingCard from "@/components/RecipeRatingCard.vue"
+import { getFirestore, doc, setDoc } from 'firebase/firestore'
 
 const recipes = ref([])
 const search = ref("")
@@ -7,7 +9,6 @@ const minProtein = ref(0)
 const loading = ref(false)
 const error = ref("")
 
-//computed filtered recipes based on search and minProtein
 const filtered = computed(() =>
   recipes.value.filter(r =>
     r.name.toLowerCase().includes(search.value.toLowerCase()) &&
@@ -15,7 +16,6 @@ const filtered = computed(() =>
   )
 )
 
-// read recipes from local JSON file
 async function loadRecipes() {
   try {
     loading.value = true
@@ -29,6 +29,21 @@ async function loadRecipes() {
   }
 }
 
+// Initialize menu document if it doesn't exist
+async function initializeMenu(menuId) {
+  const db = getFirestore()
+  const menuRef = doc(db, 'menus', String(menuId))
+  
+  try {
+    await setDoc(menuRef, {
+      ratingCount: 0,
+      ratingSum: 0
+    }, { merge: true })
+  } catch (err) {
+    console.error('Error initializing menu:', err)
+  }
+}
+
 onMounted(loadRecipes)
 </script>
 
@@ -39,21 +54,10 @@ onMounted(loadRecipes)
     <!-- filter -->
     <div class="row g-2 mb-3">
       <div class="col-sm-6">
-        <input
-          v-model="search"
-          type="text"
-          class="form-control"
-          placeholder="Search recipes..."
-        />
+        <input v-model="search" type="text" class="form-control" placeholder="Search recipes..." />
       </div>
       <div class="col-sm-6">
-        <input
-          v-model="minProtein"
-          type="number"
-          min="0"
-          class="form-control"
-          placeholder="Min protein (g)"
-        />
+        <input v-model="minProtein" type="number" min="0" class="form-control" placeholder="Min protein (g)" />
       </div>
     </div>
 
@@ -63,22 +67,9 @@ onMounted(loadRecipes)
 
     <!-- recipe list -->
     <div v-else class="row">
-      <div
-        v-for="r in filtered"
-        :key="r.id"
-        class="col-md-4 col-sm-6 mb-3"
-      >
-        <div class="card h-100 shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">{{ r.name }}</h5>
-            <p class="card-text text-muted mb-1">
-              Protein: <strong>{{ r.protein }}g</strong>
-            </p>
-            <p v-if="r.tags.length" class="small text-secondary">
-              Tags: {{ r.tags.join(", ") }}
-            </p>
-          </div>
-        </div>
+      <div v-for="r in filtered" :key="r.id" class="col-md-4 col-sm-6 mb-3">
+        <!-- 用新卡片（带评分）替换原来的内联卡片 -->
+        <RecipeRatingCard :recipe="r" />
       </div>
       <p v-if="!filtered.length" class="text-muted">No recipes found.</p>
     </div>
