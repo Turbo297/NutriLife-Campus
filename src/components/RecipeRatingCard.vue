@@ -7,7 +7,7 @@ const props = defineProps({
   recipe: { type: Object, required: true } // { id, name, protein, tags }
 })
 
-const { avg, ratingCount, userStars, setRating, uid } = useMenuRatings(String(props.recipe.id))
+const { avg, ratingCount, userStars, hasRated, setRating, uid } = useMenuRatings(String(props.recipe.id))
 
 const avgText = computed(() =>
   ratingCount.value > 0
@@ -17,12 +17,13 @@ const avgText = computed(() =>
 
 async function onRate(n) {
   try {
-    const result = await setRating(n)
-    if (!result) {
-      throw new Error('Rating failed')
+    if (hasRated.value) {
+      alert('You have already rated this recipe')
+      return
     }
+    await setRating(n)
   } catch (e) {
-    alert(e?.message || 'Please login to rate')
+    alert(e.message || 'Failed to submit rating')
   }
 }
 </script>
@@ -48,11 +49,16 @@ async function onRate(n) {
         <span class="text-muted">Your Rating:</span>
         <RatingStars 
           :model-value="userStars" 
-          :readonly="!uid" 
+          :readonly="!uid || hasRated" 
           size="20px" 
           @change="onRate" 
         />
-        <small v-if="!uid" class="text-muted">Login to rate</small>
+        <small v-if="hasRated" class="text-muted">
+          Already rated
+        </small>
+        <small v-else-if="!uid" class="text-muted">
+          Login to rate
+        </small>
       </div>
     </div>
   </div>
