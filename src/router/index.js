@@ -6,6 +6,7 @@ import Planner from '../pages/Planner.vue'
 import Learn from '../pages/Learn.vue'
 import Login from '../pages/Login.vue'
 import Register from '@/pages/Register.vue'
+import AdminDashboard from '@/pages/AdminDashboard.vue'
 
 const routes = [
   {
@@ -40,6 +41,15 @@ const routes = [
     path: '/register',
     name: 'register',  
     component: Register
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: AdminDashboard,
+    meta: { 
+      requiresAuth: true,
+      adminOnly: true
+    }
   }
 ]
 
@@ -64,38 +74,40 @@ function getCurrentUser() {
 router.beforeEach(async (to, from, next) => {
   const user = await getCurrentUser()
   
-  console.log('Navigation guard:', { 
-    to: to.name, 
-    user: user?.email,
-    requiresAuth: to.meta.requiresAuth 
-  })
+  // Check if user is admin
+  const isAdmin = user?.email === 'admin@gmail.com'
 
+  // If admin tries to access login/register, redirect to admin dashboard
+  if (isAdmin && (to.name === 'login' || to.name === 'register')) {
+    next({ name: 'admin' })
+    return
+  }
+
+  // Public routes for non-admin users
   if (to.name === 'home' || to.name === 'login' || to.name === 'register') {
     next()
     return
   }
 
-  
+  // Check authentication
   if (to.meta.requiresAuth) {
     if (!user) {
       console.log('Unauthorized access, redirecting to login')
       next({ name: 'login' })
       return
     }
-    const isAdmin = user.email === 'admin@gmail.com'
-    
-    if (isAdmin) {
-      // admin can access all pages
-      console.log('Admin access granted')
-      next()
-    } else if (['recipes', 'planner', 'learn'].includes(to.name)) {
-      // regular user can access these pages
-      console.log('User access granted')
-      next()
-    } else {
-      console.log('Access denied, redirecting to home')
-      next({ name: 'home' })
+
+    // Admin route check
+    if (to.meta.adminOnly) {
+      if (!isAdmin) {
+        console.log('Admin access denied, redirecting to home')
+        next({ name: 'home' })
+        return
+      }
     }
+    // Allow access
+    console.log('Access granted')
+    next()
   } else {
     next()
   }

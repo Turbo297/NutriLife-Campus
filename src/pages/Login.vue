@@ -132,7 +132,7 @@ const submitForm = async () => {
       if (formData.value.email === 'admin@gmail.com' && formData.value.password === 'Password123!') {
         await signInWithEmailAndPassword(auth, formData.value.email, formData.value.password)
         console.log('Admin login successful')
-        router.push({ name: 'home' })
+        router.push({ name: 'admin' })
       } else {
         const userCredential = await signInWithEmailAndPassword(
           auth,
@@ -140,7 +140,7 @@ const submitForm = async () => {
           formData.value.password
         )
         console.log('User login successful:', userCredential.user.email)
-        router.push({ name: 'recipes' })
+        router.push({ name: 'home' })
       }
     } catch (error) {
       console.error('Login error:', error.code)

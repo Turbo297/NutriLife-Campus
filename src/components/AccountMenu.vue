@@ -19,6 +19,8 @@ const displayName = computed(() => {
          'User'
 })
 
+const isAdmin = computed(() => currentUser.value?.email === 'admin@gmail.com')
+
 // Listen for auth state changes
 onMounted(() => {
   onAuthStateChanged(auth, (user) => {
@@ -37,6 +39,10 @@ function goRegister() {
 
 function goProfile() {
   router.push({ name: 'profile' })
+}
+
+function goAdminDashboard() {
+  router.push({ name: 'admin' })
 }
 
 async function doLogout() {
@@ -81,6 +87,12 @@ async function doLogout() {
           <div class="text-muted small">{{ currentUser?.email }}</div>
         </li>
         <li><hr class="dropdown-divider"></li>
+        <!-- Add Admin Dashboard button if user is admin -->
+        <li v-if="isAdmin">
+          <button class="dropdown-item text-primary" @click="goAdminDashboard">
+            <i class="dropdown-item"></i>Admin Dashboard
+          </button>
+        </li>
         <li><button class="dropdown-item" @click="goProfile">My profile</button></li>
         <li><button class="dropdown-item text-danger" @click="doLogout">Log out</button></li>
       </template>
