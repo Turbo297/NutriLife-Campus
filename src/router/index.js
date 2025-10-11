@@ -7,6 +7,7 @@ import Learn from '../pages/Learn.vue'
 import Login from '../pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import AdminDashboard from '@/pages/AdminDashboard.vue'
+import Events from '@/pages/Events.vue'
 
 const routes = [
   {
@@ -30,6 +31,12 @@ const routes = [
     path: '/learn',
     name: 'learn',
     component: Learn,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/events',
+    name: 'events',
+    component: Events,
     meta: { requiresAuth: true }
   },
   {
