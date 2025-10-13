@@ -8,7 +8,7 @@ import Login from '../pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import AdminDashboard from '@/pages/AdminDashboard.vue'
 import Events from '@/pages/Events.vue'
-
+import Map from '@/pages/Map.vue'
 const routes = [
   {
     path: '/',
@@ -25,6 +25,12 @@ const routes = [
     path: '/planner',
     name: 'planner',
     component: Planner,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/map',
+    name: 'map',
+    component: Map,
     meta: { requiresAuth: true }
   },
   {
