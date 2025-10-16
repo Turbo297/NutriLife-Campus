@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import mapboxgl from 'mapbox-gl'
 import { collection, getDocs } from 'firebase/firestore'
@@ -20,7 +20,7 @@ const eventByPlaceId = ref(new Map()) // Mapping: placeId -> events[]
 const ui = reactive({
   nearMe: false,
   radiusKm: 3,
-  type: { clinic: true, 'cheap-food': true, event: true },
+  type: { supermarket: true, 'cheap-food': true, event: true },
   onlyWithEvent: false,
   loading: true,
   error: ''
@@ -42,19 +42,13 @@ function haversineKm(a, b) {
 
 function withinRadius(p) {
   if (!ui.nearMe || !userPos.value) return true
-  const d = haversineKm(
-    { lat: p.coords.lat, lng: p.coords.lng },
-    userPos.value
-  )
+  const d = haversineKm({ lat: p?.coords?.lat, lng: p?.coords?.lng }, userPos.value)
   return d <= ui.radiusKm
 }
 
 function distanceLabel(p) {
   if (!userPos.value) return ''
-  const d = haversineKm(
-    { lat: p.coords.lat, lng: p.coords.lng },
-    userPos.value
-  )
+  const d = haversineKm({ lat: p.coords.lat, lng: p.coords.lng }, userPos.value)
   return `${d.toFixed(1)} km`
 }
 
@@ -62,17 +56,17 @@ function distanceLabel(p) {
 async function loadPlacesAndEvents() {
   ui.loading = true
   try {
-    // Load places
+    // Places
     const ps = await getDocs(collection(db, 'places'))
     places.value = ps.docs.map(d => ({ id: d.id, ...d.data() }))
 
-    // Load events
+    // Events
     const es = await getDocs(collection(db, 'events'))
     events.value = es.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(e => (e.status || 'open') === 'open')
 
-    // Map events to places
+    // Map events to placeId
     const mapE = new Map()
     events.value.forEach(e => {
       const pid = typeof e.placeId === 'string' ? e.placeId : e.placeId?.id
@@ -96,7 +90,10 @@ const filtered = computed(() => {
     .filter(withinRadius)
     .map(p => ({
       ...p,
-      _distanceKm: userPos.value ? haversineKm({ lat: p.coords.lat, lng: p.coords.lng }, userPos.value) : null,
+      _distanceKm:
+        userPos.value && p?.coords?.lat != null && p?.coords?.lng != null
+          ? haversineKm({ lat: p.coords.lat, lng: p.coords.lng }, userPos.value)
+          : null,
       _events: eventByPlaceId.value.get(p.id) || []
     }))
     .sort((a, b) => {
@@ -114,9 +111,15 @@ function initMap() {
     container: mapEl.value,
     style: 'mapbox://styles/mapbox/streets-v12',
     center: [144.9631, -37.8136], // Melbourne
-    zoom: 12
+    zoom: 12,
+    attributionControl: true
   })
   map.value.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+  map.value.on('load', () => {
+    if (ui.nearMe && userPos.value) drawRadiusCircle()
+    renderMarkers()
+  })
 }
 
 function clearMarkers() {
@@ -130,9 +133,9 @@ function renderMarkers() {
 
   filtered.value.forEach(p => {
     const el = document.createElement('div')
-    el.className = 'marker'
+    el.className = `marker ${p.type}` // 按类型着色
 
-    // Show badge if place has events
+    // 事件数量 badge
     if (eventByPlaceId.value.has(p.id)) {
       const badge = document.createElement('span')
       badge.className = 'badge'
@@ -141,42 +144,40 @@ function renderMarkers() {
     }
 
     const popupHtml = `
-      <div class="popup">
+      <div class="popup" role="dialog" aria-label="${p.name}">
         <strong>${p.name}</strong><br/>
-        <small>${p.type} · ${p.address}</small><br/>
+        <small>${p.type} · ${p.address ?? ''}</small><br/>
         ${userPos.value ? `<small>Distance: ${distanceLabel(p)}</small><br/>` : ''}
         <div class="actions">
           ${eventByPlaceId.value.has(p.id)
-            ? `<button class="btn btn-sm" data-action="view-events" data-id="${p.id}">View Events</button>`
+            ? `<button class="btn btn-sm" data-action="view-events" data-id="${p.id}" aria-label="View events at ${p.name}">View Events</button>`
             : ''
           }
-          <button class="btn btn-sm" data-action="route" data-id="${p.id}">Route</button>
+          <button class="btn btn-sm" data-action="route" data-id="${p.id}" aria-label="Route to ${p.name}">Route</button>
         </div>
       </div>
     `
 
+    const popup = new mapboxgl.Popup({ offset: 16 }).setHTML(popupHtml)
+    popup.on('open', () => {
+      const pop = popup.getElement()
+      if (!pop) return
+      pop.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.getAttribute('data-action')
+          const id = btn.getAttribute('data-id')
+          const place = places.value.find(x => x.id === id)
+          if (!action || !place) return
+          if (action === 'route') startRouteTo(place.coords)
+          if (action === 'view-events') goToPlaceEvents(id)
+        }, { once: true })
+      })
+    })
+
     const m = new mapboxgl.Marker(el)
       .setLngLat([p.coords.lng, p.coords.lat])
-      .setPopup(new mapboxgl.Popup({ offset: 16 }).setHTML(popupHtml))
+      .setPopup(popup)
       .addTo(map.value)
-
-    // Handle popup button actions
-    m.getElement().addEventListener('click', () => {
-      setTimeout(() => {
-        const pop = m.getPopup()?.getElement()
-        if (!pop) return
-        pop.querySelectorAll('button').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const action = btn.getAttribute('data-action')
-            const id = btn.getAttribute('data-id')
-            const place = places.value.find(x => x.id === id)
-            if (!action || !place) return
-            if (action === 'route') startRouteTo(place.coords)
-            if (action === 'view-events') goToPlaceEvents(id)
-          })
-        })
-      }, 0)
-    })
 
     markers.value.push(m)
   })
@@ -193,39 +194,36 @@ function requestUserLocation() {
   })
 }
 
-async function toggleNearMe() {
-  if (!ui.nearMe) {
-    userPos.value = null
-    return
-  }
-  try {
-    const pos = await requestUserLocation()
-    userPos.value = pos
-    if (map.value) {
-      map.value.flyTo({ center: [pos.lng, pos.lat], zoom: Math.max(map.value.getZoom(), 13) })
-      drawRadiusCircle()
-    }
-  } catch (e) {
-    ui.nearMe = false
-    alert('Unable to get location. Please allow location access.')
-  }
+function removeRadiusCircle() {
+  if (!map.value) return
+  const id = 'near-circle'
+  if (map.value.getLayer(id)) map.value.removeLayer(id)
+  if (map.value.getSource(id)) map.value.removeSource(id)
 }
 
 function drawRadiusCircle() {
   if (!map.value || !userPos.value) return
   const id = 'near-circle'
-  if (map.value.getLayer(id)) {
-    map.value.removeLayer(id)
-    map.value.removeSource(id)
-  }
-  const steps = 64
+  removeRadiusCircle()
+
+  const steps = 128
+  const center = [userPos.value.lng, userPos.value.lat]
   const coords = []
+
+  // 通过 project/unproject 近似成米级半径
+  const centerPx = map.value.project(center)
+  const metersPerDegLat = 111320
+  const p2 = map.value.project([center[0], center[1] + 0.0001])
+  const pxPerMeter = Math.abs(p2.y - centerPx.y) / (0.0001 * metersPerDegLat)
+
   for (let i = 0; i <= steps; i++) {
-    const angle = (i / steps) * 360
-    const dx = (ui.radiusKm / 111) * Math.cos(angle * Math.PI / 180)
-    const dy = (ui.radiusKm / 111) * Math.sin(angle * Math.PI / 180)
-    coords.push([userPos.value.lng + dx, userPos.value.lat + dy])
+    const t = (i / steps) * 2 * Math.PI
+    const dx = Math.cos(t) * ui.radiusKm * 1000 * pxPerMeter
+    const dy = Math.sin(t) * ui.radiusKm * 1000 * pxPerMeter
+    const pt = map.value.unproject({ x: centerPx.x + dx, y: centerPx.y + dy })
+    coords.push([pt.lng, pt.lat])
   }
+
   const data = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] } }] }
   map.value.addSource(id, { type: 'geojson', data })
   map.value.addLayer({ id, type: 'fill', source: id, paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.15 } })
@@ -235,12 +233,12 @@ function drawRadiusCircle() {
 function startRouteTo(dest) {
   if (!userPos.value) {
     ui.nearMe = true
-    toggleNearMe()
-    return
+    return // watcher 会触发定位获取
   }
   const s = `${userPos.value.lat},${userPos.value.lng}`
   const d = `${dest.lat},${dest.lng}`
-  window.open(`https://www.google.com/maps/dir/?api=1&origin=${s}&destination=${d}&travelmode=walking`, '_blank')
+  const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(s)}&destination=${encodeURIComponent(d)}&travelmode=walking`
+  window.open(url, '_blank')
 }
 
 // -------------------- Event linkage --------------------
@@ -252,7 +250,14 @@ function goToPlaceEvents(placeId) {
 onMounted(async () => {
   initMap()
   await loadPlacesAndEvents()
-  renderMarkers()
+  if (map.value?.loaded()) renderMarkers()
+})
+
+onBeforeUnmount(() => {
+  clearMarkers()
+  removeRadiusCircle()
+  map.value?.remove()
+  map.value = null
 })
 
 watch([filtered, () => ui.radiusKm], () => {
@@ -260,30 +265,48 @@ watch([filtered, () => ui.radiusKm], () => {
   if (ui.nearMe) drawRadiusCircle()
 })
 
-watch(() => ui.nearMe, toggleNearMe)
+watch(() => ui.nearMe, async (val) => {
+  if (!val) {
+    userPos.value = null
+    removeRadiusCircle()
+    return
+  }
+  try {
+    const pos = await requestUserLocation()
+    userPos.value = pos
+    if (map.value) {
+      map.value.flyTo({ center: [pos.lng, pos.lat], zoom: Math.max(map.value.getZoom(), 13) })
+      drawRadiusCircle()
+    }
+  } catch {
+    ui.nearMe = false
+    alert('Unable to get location. Please allow location access.')
+  }
+})
 </script>
 
 <template>
   <div class="map-layout">
-    <aside class="panel">
-      <h3 class="title">Nearby Places</h3>
+    <aside class="panel" aria-label="Nearby places panel">
+      <h3 class="title" id="nearby-title">Nearby Places</h3>
 
       <!-- Near Me toggle -->
-      <div class="section">
-        <label class="switch">
-          <input type="checkbox" v-model="ui.nearMe" />
+      <div class="section" aria-labelledby="near-me-toggle">
+        <label id="near-me-toggle" class="switch">
+          <input type="checkbox" v-model="ui.nearMe" aria-describedby="near-me-hint" />
           <span>Enable "Near me"</span>
         </label>
+        <small id="near-me-hint">Filters results by your current location.</small>
         <div v-if="ui.nearMe" class="radius">
-          <label>Radius: {{ ui.radiusKm }} km</label>
-          <input type="range" min="0.5" max="10" step="0.5" v-model.number="ui.radiusKm" />
+          <label for="radius">Radius: {{ ui.radiusKm }} km</label>
+          <input id="radius" type="range" min="0.5" max="10" step="0.5" v-model.number="ui.radiusKm" />
         </div>
       </div>
 
       <!-- Type filters -->
-      <div class="section">
-        <div class="group">
-          <label><input type="checkbox" v-model="ui.type.clinic"> Clinic</label>
+      <div class="section" aria-label="Type filters">
+        <div class="group" role="group" aria-label="Place types">
+          <label><input type="checkbox" v-model="ui.type.supermarket"> Supermarket</label>
           <label><input type="checkbox" v-model="ui.type['cheap-food']"> Cheap Food</label>
           <label><input type="checkbox" v-model="ui.type.event"> Event Place</label>
         </div>
@@ -294,11 +317,11 @@ watch(() => ui.nearMe, toggleNearMe)
       </div>
 
       <!-- Place list -->
-      <div class="section list">
+      <div class="section list" aria-live="polite">
         <div v-if="ui.loading">Loading...</div>
         <div v-else-if="filtered.length === 0">No results found</div>
         <ul v-else>
-          <li v-for="p in filtered" :key="p.id" class="card">
+          <li v-for="p in filtered" :key="p.id" class="card" tabindex="0" aria-label="Place card">
             <div class="row1">
               <strong>{{ p.name }}</strong>
               <small>{{ p.type }}</small>
@@ -330,6 +353,7 @@ watch(() => ui.nearMe, toggleNearMe)
 .panel {
   width: 320px; padding: 12px; overflow: auto;
   border-right: 1px solid rgba(0,0,0,.08);
+  background: #fff;
 }
 .map-wrap { flex: 1; }
 .map { width: 100%; height: 100%; }
@@ -347,7 +371,7 @@ watch(() => ui.nearMe, toggleNearMe)
 .btn { font-size: 12px; padding: 6px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: #f8fafc; cursor: pointer; }
 .btn:hover { background: #eef2ff; }
 
-/* Marker style */
+/* Marker base */
 .marker {
   width: 16px; height: 16px; border-radius: 50%;
   background: #2563eb; position: relative; box-shadow: 0 0 0 2px #fff;
@@ -358,9 +382,16 @@ watch(() => ui.nearMe, toggleNearMe)
   padding: 3px 5px; border-radius: 999px;
   background: #ef4444; color: #fff;
 }
+
+/* Per-type colors */
+.marker.supermarket { background: #16a34a; } /* 绿色 */
+.marker.cheap-food { background: #f59e0b; } /* 橙色 */
+.marker.event { background: #2563eb; }      /* 蓝色 */
+
 .popup .actions { margin-top: 6px; display: flex; gap: 6px; }
 .popup .btn { font-size: 12px; padding: 4px 8px; }
 
+/* Mobile */
 @media (max-width: 900px) {
   .panel { width: 100%; position: absolute; z-index: 1; background: rgba(255,255,255,.95); }
   .map-layout { position: relative; }
