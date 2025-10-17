@@ -68,7 +68,6 @@ onMounted(loadRecipes)
     <!-- recipe list -->
     <div v-else class="row">
       <div v-for="r in filtered" :key="r.id" class="col-md-4 col-sm-6 mb-3">
-        <!-- 用新卡片（带评分）替换原来的内联卡片 -->
         <RecipeRatingCard :recipe="r" />
       </div>
       <p v-if="!filtered.length" class="text-muted">No recipes found.</p>

@@ -8,24 +8,24 @@ const router = useRouter()
 const currentAdmin = ref(auth.currentUser?.email || 'Admin')
 
 const adminRoutes = [
-  {
-    name: 'Recipe Management',
-    description: 'View and manage all recipes',
-    path: '/admin/recipes',
-    icon: '🥗'
-  },
-  {
-    name: 'User Management',
-    description: 'Manage user accounts and permissions',
-    path: '/admin/users',
-    icon: '👥'
-  },
-  {
-    name: 'Rating Overview',
-    description: 'View all ratings and statistics',
-    path: '/admin/ratings',
-    icon: '⭐'
-  }
+{
+  name: 'Event Management',
+  description: 'Create, publish and manage events',
+  path: '/admin/events',
+  icon: '📅'
+},
+{
+  name: 'Registrations',
+  description: 'Approve or reject event registrations',
+  path: '/admin/registrations',
+  icon: '📝'
+},
+{
+  name: 'Recipe Management',
+  description: 'View and manage all recipes',
+  path: '/admin/recipes',
+  icon: '🥗'
+}
 ]
 </script>
 
