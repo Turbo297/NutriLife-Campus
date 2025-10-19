@@ -11,7 +11,10 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
 const router = useRouter()
 const mapEl = ref(null)
 const map = ref(null)
+
+// All map markers (array) + a fast lookup by placeId (Map)
 const markers = ref([])
+const markersById = ref(new Map()) // placeId -> mapboxgl.Marker
 
 const places = ref([])                // Firestore /places
 const events = ref([])                // Firestore /events
@@ -21,7 +24,6 @@ const ui = reactive({
   nearMe: false,
   radiusKm: 3,
   type: { supermarket: true, 'cheap-food': true, event: true },
-  onlyWithEvent: false,
   loading: true,
   error: ''
 })
@@ -86,7 +88,6 @@ async function loadPlacesAndEvents() {
 const filtered = computed(() => {
   return places.value
     .filter(p => ui.type[p.type])
-    .filter(p => !ui.onlyWithEvent || eventByPlaceId.value.has(p.id))
     .filter(withinRadius)
     .map(p => ({
       ...p,
@@ -123,8 +124,10 @@ function initMap() {
 }
 
 function clearMarkers() {
+  // Remove markers from map and clear both structures
   markers.value.forEach(m => m.remove())
   markers.value = []
+  markersById.value.clear()
 }
 
 function renderMarkers() {
@@ -133,9 +136,9 @@ function renderMarkers() {
 
   filtered.value.forEach(p => {
     const el = document.createElement('div')
-    el.className = `marker ${p.type}` // 按类型着色
+    el.className = `marker ${p.type}` // per-type color
 
-    // 事件数量 badge
+    // Badge for event count
     if (eventByPlaceId.value.has(p.id)) {
       const badge = document.createElement('span')
       badge.className = 'badge'
@@ -180,10 +183,47 @@ function renderMarkers() {
       .addTo(map.value)
 
     markers.value.push(m)
+    markersById.value.set(p.id, m) // <-- keep a fast pointer from placeId to Marker
   })
 }
 
-// -------------------- Location --------------------
+// -------------------- Locate (NEW) --------------------
+/**
+ * Fly to the place and open its popup.
+ * Accepts a placeId (string) or a place object with { id }.
+ */
+function locateTo(target) {
+  const id = typeof target === 'string' ? target : target?.id
+  const place = places.value.find(x => x.id === id)
+  if (!place || !map.value) return
+
+  const center = [place.coords.lng, place.coords.lat]
+  map.value.flyTo({ center, zoom: Math.max(map.value.getZoom(), 15), essential: true })
+
+  const marker = markersById.value.get(id)
+  if (marker) {
+    const openPopup = () => {
+      const popup = marker.getPopup && marker.getPopup()
+      if (popup && !popup.isOpen?.()) marker.togglePopup()
+    }
+    // Small delay to sync with flyTo animation
+    setTimeout(openPopup, 350)
+  }
+}
+
+// -------------------- Directions --------------------
+function startRouteTo(dest) {
+  if (!userPos.value) {
+    ui.nearMe = true
+    return
+  }
+  const s = `${userPos.value.lat},${userPos.value.lng}`
+  const d = `${dest.lat},${dest.lng}`
+  const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(s)}&destination=${encodeURIComponent(d)}&travelmode=walking`
+  window.open(url, '_blank')
+}
+
+// -------------------- Location ring --------------------
 function requestUserLocation() {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
@@ -210,7 +250,7 @@ function drawRadiusCircle() {
   const center = [userPos.value.lng, userPos.value.lat]
   const coords = []
 
-  // 通过 project/unproject 近似成米级半径
+  // Calculate pixels per meter at current zoom (approx)
   const centerPx = map.value.project(center)
   const metersPerDegLat = 111320
   const p2 = map.value.project([center[0], center[1] + 0.0001])
@@ -227,18 +267,6 @@ function drawRadiusCircle() {
   const data = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [coords] } }] }
   map.value.addSource(id, { type: 'geojson', data })
   map.value.addLayer({ id, type: 'fill', source: id, paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.15 } })
-}
-
-// -------------------- Directions --------------------
-function startRouteTo(dest) {
-  if (!userPos.value) {
-    ui.nearMe = true
-    return // watcher 会触发定位获取
-  }
-  const s = `${userPos.value.lat},${userPos.value.lng}`
-  const d = `${dest.lat},${dest.lng}`
-  const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(s)}&destination=${encodeURIComponent(d)}&travelmode=walking`
-  window.open(url, '_blank')
 }
 
 // -------------------- Event linkage --------------------
@@ -260,11 +288,13 @@ onBeforeUnmount(() => {
   map.value = null
 })
 
+// Re-render markers when filters or radius change
 watch([filtered, () => ui.radiusKm], () => {
   renderMarkers()
   if (ui.nearMe) drawRadiusCircle()
 })
 
+// Toggle Near Me ring + get current position
 watch(() => ui.nearMe, async (val) => {
   if (!val) {
     userPos.value = null
@@ -310,10 +340,6 @@ watch(() => ui.nearMe, async (val) => {
           <label><input type="checkbox" v-model="ui.type['cheap-food']"> Cheap Food</label>
           <label><input type="checkbox" v-model="ui.type.event"> Event Place</label>
         </div>
-        <label class="switch">
-          <input type="checkbox" v-model="ui.onlyWithEvent" />
-          <span>Only places with events</span>
-        </label>
       </div>
 
       <!-- Place list -->
@@ -321,7 +347,14 @@ watch(() => ui.nearMe, async (val) => {
         <div v-if="ui.loading">Loading...</div>
         <div v-else-if="filtered.length === 0">No results found</div>
         <ul v-else>
-          <li v-for="p in filtered" :key="p.id" class="card" tabindex="0" aria-label="Place card">
+          <li
+            v-for="p in filtered"
+            :key="p.id"
+            class="card"
+            tabindex="0"
+            aria-label="Place card"
+            :data-place-id="p.id"
+          >
             <div class="row1">
               <strong>{{ p.name }}</strong>
               <small>{{ p.type }}</small>
@@ -335,6 +368,7 @@ watch(() => ui.nearMe, async (val) => {
               <button class="btn" @click="goToPlaceEvents(p.id)" v-if="p._events.length">
                 View Events ({{ p._events.length }})
               </button>
+              <button class="btn" @click="locateTo(p.id)">Locate</button>
               <button class="btn" @click="startRouteTo(p.coords)">Route</button>
             </div>
           </li>
@@ -384,9 +418,9 @@ watch(() => ui.nearMe, async (val) => {
 }
 
 /* Per-type colors */
-.marker.supermarket { background: #16a34a; } /* 绿色 */
-.marker.cheap-food { background: #f59e0b; } /* 橙色 */
-.marker.event { background: #2563eb; }      /* 蓝色 */
+.marker.supermarket { background: #16a34a; }
+.marker.cheap-food { background: #f59e0b; }
+.marker.event { background: #2563eb; } 
 
 .popup .actions { margin-top: 6px; display: flex; gap: 6px; }
 .popup .btn { font-size: 12px; padding: 4px 8px; }
