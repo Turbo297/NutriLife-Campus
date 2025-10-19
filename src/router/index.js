@@ -3,7 +3,6 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import Home from '../pages/Home.vue'
 import Recipes from '../pages/Recipes.vue'
 import Planner from '../pages/Planner.vue'
-import Learn from '../pages/Learn.vue'
 import Login from '../pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import AdminDashboard from '@/pages/AdminDashboard.vue'
@@ -13,11 +12,18 @@ import AdminRegistrations from '@/pages/AdminRegistrations.vue'
 import AdminEvents from '@/pages/AdminEvents.vue'
 import AdminRecipes from '@/pages/AdminRecipes.vue'
 import EventForm from '@/pages/EventForm.vue'
+import Profile from '@/pages/Profile.vue'
 const routes = [
   {
     path: '/',
     name: 'home',
     component: Home
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: Profile,
+    meta: { requiresAuth: true }
   },
   {
     path: '/recipes',
