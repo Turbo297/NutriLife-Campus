@@ -159,7 +159,7 @@ function exportCSV() {
         <template #filter>
           <Dropdown
             v-model="filters.status.value"
-            :options="['pending', 'confirmed', 'rejected', 'cancelled']"
+            :options="['pending', 'confirmed', 'cancelled']"
             placeholder="All"
             showClear
           />
@@ -170,7 +170,7 @@ function exportCSV() {
             :class="{
               'text-bg-warning': data.status === 'pending',
               'text-bg-success': data.status === 'confirmed',
-              'text-bg-secondary': data.status === 'rejected' || data.status === 'cancelled'
+              'text-bg-secondary': data.status === 'cancelled'
             }"
           >
             {{ data.status }}

@@ -5,7 +5,27 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore'
 import { db } from '@/firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+// UI state for sending
+const sendingId = ref('') 
+const toast = (msg) => alert(msg) 
+async function sendReminderEmail(eventRow) {
+  try {
+    const functions = getFunctions(undefined, 'australia-southeast1')
+    const sendEventReminder = httpsCallable(functions, 'sendEventReminder')
 
+    sendingId.value = eventRow.id
+    const payload = { eventId: eventRow.id } 
+    const res = await sendEventReminder(payload)
+
+    toast(`Reminder queued to ${res.data?.sent || 0} registrants.`)
+  } catch (e) {
+    console.error(e)
+    toast(e?.message || 'Failed to send reminder.')
+  } finally {
+    sendingId.value = ''
+  }
+}
 // ----------------------------
 // Reactive State
 // ----------------------------
@@ -158,6 +178,20 @@ onBeforeUnmount(() => unsub && unsub())
           {{ data.seatsLeft ?? '-' }}
         </template>
       </Column>
+      <!-- Bulk Email -->
+      <Column header="Email" :exportable="false">
+        <template #body="{ data }">
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            :disabled="sendingId === data.id"
+            @click="sendReminderEmail(data)"
+            title="Send reminder to all registrants"
+          >
+            {{ sendingId === data.id ? 'Sending…' : 'Send Reminder' }}
+          </button>
+        </template>
+      </Column>
+
 
       <!-- Removed: Status -->
       <!-- Removed: Actions -->

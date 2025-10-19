@@ -14,9 +14,18 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.19",
+    "@fullcalendar/daygrid": "^6.1.19",
+    "@fullcalendar/interaction": "^6.1.19",
+    "@fullcalendar/timegrid": "^6.1.19",
+    "@fullcalendar/vue3": "^6.1.19",
     "bootstrap": "^5.3.7",
+    "chart.js": "^4.5.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "firebase": "^12.2.1",
     "mapbox-gl": "^3.15.0",
+    "pinia": "^3.0.3",
     "primeicons": "^7.0.0",
     "primevue": "^3.53.1",
     "vue": "^3.5.18",

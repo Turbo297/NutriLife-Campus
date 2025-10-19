@@ -4,13 +4,14 @@
 // - List upcoming published events
 // - Search by keyword and filter by tags
 // - Register with 1 click (writes status="pending")
-// - Disable button + label if already registered
+// - Cancel registration (deletes registrations/{uid})
+// - Disable/flip button based on whether already registered
 // - Shows remaining seats if `seatsLeft` exists on the event document
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   collection, collectionGroup, query, where, orderBy,
-  getDocs, doc, setDoc, serverTimestamp, Timestamp
+  getDocs, doc, setDoc, deleteDoc, serverTimestamp, Timestamp
 } from 'firebase/firestore'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { db } from '@/firebase' // your Firebase initialization
@@ -151,7 +152,6 @@ async function registerFor(ev) {
     myRegs.value = { ...myRegs.value, [ev.id]: 'pending' }
     alert('Registered! A confirmation email will be sent shortly.')
   } catch (e) {
-    // If doc already exists or rule blocks, show a friendly message
     const msg = (e && e.message) || String(e)
     if (msg.includes('PERMISSION_DENIED') || msg.toLowerCase().includes('already')) {
       alert('You have already registered for this event.')
@@ -159,6 +159,33 @@ async function registerFor(ev) {
       alert('Registration failed. Please try again later.')
       console.error(e)
     }
+  }
+}
+
+// --- Cancel action ---
+// Deletes this user's registration doc for the given event.
+// If you prefer to keep history, switch to updateDoc(..., { status: 'cancelled' }).
+async function cancelRegistration(ev) {
+  if (!user.value) {
+    alert('Please log in first.')
+    return
+  }
+  const ok = confirm(`Cancel your registration for "${ev.title}"?`)
+  if (!ok) return
+
+  try {
+    const regRef = doc(db, 'events', ev.id, 'registrations', user.value.uid)
+    await deleteDoc(regRef)
+
+    // Optimistically remove local state so UI flips back to "Register"
+    const copy = { ...myRegs.value }
+    delete copy[ev.id]
+    myRegs.value = copy
+
+    alert('Your registration has been cancelled.')
+  } catch (e) {
+    console.error(e)
+    alert('Failed to cancel. Please try again later.')
   }
 }
 </script>
@@ -203,6 +230,7 @@ async function registerFor(ev) {
                 {{ myRegs[ev.id] }}
               </span>
             </h5>
+
             <p class="text-muted mb-1">{{ fmtRange(ev) }}</p>
             <p class="mb-1"><strong>Location:</strong> {{ ev.location?.name }}</p>
             <p class="mb-2">{{ ev.description }}</p>
@@ -211,15 +239,27 @@ async function registerFor(ev) {
               <span v-for="t in ev.tags" :key="t" class="badge bg-success me-1">{{ t }}</span>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center mt-auto">
               <small class="text-muted">{{ seatsText(ev) }}</small>
+
+              <!-- If not registered: show Register -->
               <button
+                v-if="!isRegistered(ev.id)"
                 class="btn btn-primary"
-                :disabled="isRegistered(ev.id)"
                 @click="registerFor(ev)"
               >
-                {{ isRegistered(ev.id) ? 'Already registered' : 'Register' }}
+                Register
               </button>
+
+              <!-- If already registered: show Cancel -->
+              <div v-else class="d-flex gap-2">
+                <button
+                  class="btn btn-outline-danger"
+                  @click="cancelRegistration(ev)"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
