@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import Home from '../pages/Home.vue'
 import Recipes from '../pages/Recipes.vue'
-import Planner from '../pages/Planner.vue'
 import Login from '../pages/Login.vue'
 import Register from '@/pages/Register.vue'
 import AdminDashboard from '@/pages/AdminDashboard.vue'
@@ -30,12 +29,6 @@ const routes = [
     name: 'recipes',
     component: Recipes,
     meta: { requiresAuth: true } 
-  },
-  {
-    path: '/planner',
-    name: 'planner',
-    component: Planner,
-    meta: { requiresAuth: true }
   },
   {
     path: '/map',

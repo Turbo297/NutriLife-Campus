@@ -14,7 +14,7 @@
         <div class="collapse navbar-collapse" id="mainNavbar">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item"><router-link to="/" class="nav-link" exact-active-class="active">Home</router-link></li>
-            <li class="nav-item"><router-link to="/planner" class="nav-link" exact-active-class="active">Plan</router-link></li>
+            <li class="nav-item"><router-link to="/recipes" class="nav-link" exact-active-class="active">Recipes</router-link></li>
             <li class="nav-item"><router-link to="/map" class="nav-link" exact-active-class="active">Map</router-link></li>
             <li class="nav-item"><router-link to="/events" class="nav-link" exact-active-class="active">Events</router-link></li>
             <AccountMenu />

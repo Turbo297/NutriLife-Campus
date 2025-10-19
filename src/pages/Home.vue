@@ -14,9 +14,6 @@ import Homepage from '@/assets/Homepage.jpg'
           <router-link to="/recipes" class="btn btn-primary btn-lg px-4 shadow">
             Explore Recipes
           </router-link>
-          <a class="btn btn-outline-secondary btn-lg px-4" href="#">
-            Start Meal Planner
-          </a>
         </div>
       </div>
     </div>
