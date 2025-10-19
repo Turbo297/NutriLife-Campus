@@ -300,7 +300,8 @@ app.get('/events', async (req, res) => {
     const limit = Math.min(toNumber(req.query.limit, 10), 50)
     const page = Math.max(toNumber(req.query.page, 1), 1)
 
-    const snap = await db.collection('events').where('status', '==', 'open').get()
+    // Query published events (using isPublished field)
+    const snap = await db.collection('events').where('isPublished', '==', true).get()
 
     const all = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .filter(e =>
@@ -317,12 +318,17 @@ app.get('/events', async (req, res) => {
       .map(e => ({
         id: e.id,
         title: e.title,
+        description: e.description || null,
         category: e.category || e.type || null,
         startAt: toDateAny(e.startAt)?.toISOString() || null,
         endAt: toDateAny(e.endAt)?.toISOString() || null,
         location: e.location || null,
+        capacity: e.capacity ?? null,
         seatsLeft: e.seatsLeft ?? null,
-        tags: Array.isArray(e.tags) ? e.tags : []
+        imageUrl: e.imageUrl || null,
+        tags: Array.isArray(e.tags) ? e.tags : [],
+        createdAt: toDateAny(e.createdAt)?.toISOString() || null,
+        updatedAt: toDateAny(e.updatedAt)?.toISOString() || null
       }))
 
     const data = paginate(all, limit, page)
